@@ -81,6 +81,7 @@ async function main() {
         res.send(results);
     })
 
+    // method 1: use mongodb updateOne. however, it does not return the updated document
     // create new comment
     // app.patch("/snippets/:id/comments/create", async (req, res) => {
     //     console.log(req.body);
@@ -103,7 +104,8 @@ async function main() {
     //     res.send(results);
     // })
 
-        // create new comment and return the new comment added
+    // method 2: use mongodb findOneAndUpdate, it returns updated documented
+    // create new comment and return the new comment added
         app.patch("/snippets/:id/comments/create", async (req, res) => {
             console.log(req.body);
             let db = await connect();
@@ -133,6 +135,27 @@ async function main() {
                         length: 0,
                         comments: {$slice:-1}
                     },
+                    returnDocument: "after"
+                 });
+            res.status(200);
+            res.send(results);
+        })
+
+        // delete existing comment and return the updated snippet
+        app.patch("/snippets/:id/comments/delete/:commentID", async (req, res) => {
+            console.log(req.body);
+            let db = await connect();
+            let results = await db.collection("snippets").findOneAndUpdate({
+                "_id": ObjectId(req.params.id)
+            },
+                {
+                    $pull: {
+                        comments: {
+                            _id: ObjectId(req.params.commentID)
+                        }
+                    }
+                },
+                {
                     returnDocument: "after"
                  });
             console.log(results);
