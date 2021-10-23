@@ -66,7 +66,6 @@ async function main() {
 
     // create new snippet
     app.post("/snippets/create", async (req, res) => {
-        console.log(req.body);
         let db = await connect();
         let results = await db.collection("snippets").insertOne({
             name: req.body.name,
@@ -106,63 +105,74 @@ async function main() {
 
     // method 2: use mongodb findOneAndUpdate, it returns updated documented
     // create new comment and return the new comment added
-        app.patch("/snippets/:id/comments/create", async (req, res) => {
-            console.log(req.body);
-            let db = await connect();
-            let results = await db.collection("snippets").findOneAndUpdate({
-                "_id": ObjectId(req.params.id)
-            },
-                {
-                    $push: {
-                        comments: {
-                            _id: ObjectId(),
-                            username: req.body.username,
-                            date: Date(),
-                            comment: req.body.comment
-                        }
+    app.patch("/snippets/:id/comments/create", async (req, res) => {
+        let db = await connect();
+        let results = await db.collection("snippets").findOneAndUpdate(
+            { "_id": ObjectId(req.params.id) },
+            {
+                $push: {
+                    comments: {
+                        _id: ObjectId(),
+                        username: req.body.username,
+                        date: Date(),
+                        comment: req.body.comment
                     }
-                },
-                {
-                    projection: {
-                        _id: 0,
-                        name: 0,
-                        content: 0,
-                        occasions: 0,
-                        type: 0,
-                        creator: 0,
-                        collectedBy: 0,
-                        theme: 0,
-                        length: 0,
-                        comments: {$slice:-1}
-                    },
-                    returnDocument: "after"
-                 });
-            res.status(200);
-            res.send(results);
-        })
-
-        // delete existing comment and return the updated snippet
-        app.patch("/snippets/:id/comments/delete/:commentID", async (req, res) => {
-            console.log(req.body);
-            let db = await connect();
-            let results = await db.collection("snippets").findOneAndUpdate({
-                "_id": ObjectId(req.params.id)
+                }
             },
-                {
-                    $pull: {
-                        comments: {
-                            _id: ObjectId(req.params.commentID)
-                        }
-                    }
+            {
+                projection: {
+                    _id: 0,
+                    name: 0,
+                    content: 0,
+                    occasions: 0,
+                    type: 0,
+                    creator: 0,
+                    collectedBy: 0,
+                    theme: 0,
+                    length: 0,
+                    comments: { $slice: -1 }
                 },
-                {
-                    returnDocument: "after"
-                 });
-            console.log(results);
-            res.status(200);
-            res.send(results);
-        })
+                returnDocument: "after"
+            });
+        res.status(200);
+        res.send(results);
+    })
 
+    // delete existing comment and return the updated snippet
+    app.patch("/snippets/:id/comments/delete/:commentID", async (req, res) => {
+        let db = await connect();
+        let results = await db.collection("snippets").findOneAndUpdate(
+            {"_id": ObjectId(req.params.id)},
+            {
+                $pull: {comments: {_id: ObjectId(req.params.commentID)} }
+            },
+            {returnDocument: "after"}
+        );
+        res.status(200);
+        res.send(results);
+    })
+
+    // update existing comment and return the updated snippet
+    app.patch("/snippets/:id/comments/update/:commentID", async (req, res) => {
+        console.log(req.body);
+        let db = await connect();
+        let results = await db.collection("snippets").findOneAndUpdate(
+            { "_id": ObjectId(req.params.id) },
+            { $set: { "comments.$[elem].comment": req.body.comment,
+                      "comments.$[elem].date": Date()  
+                    } 
+            },
+            {
+                arrayFilters: [{ "elem._id": { $eq: ObjectId(req.params.commentID) } }],
+                // for future reference, to project just the updated comment from the comments array
+                // projection: {
+                //     comments: { $elemMatch: { _id: ObjectId(req.params.commentID) } }
+                // },
+                returnDocument: "after"
+            });
+        res.status(200);
+        res.send(results);
+    })
 }
 
 main();
