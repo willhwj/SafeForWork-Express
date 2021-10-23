@@ -82,26 +82,63 @@ async function main() {
     })
 
     // create new comment
-    app.patch("/snippets/:id/comments/create", async (req, res) => {
-        console.log(req.body);
-        let db = await connect();
-        let results = await db.collection("snippets").updateOne({
-            "_id": ObjectId(req.params.id)
-        },
-            {
-                $push: {
-                    comments: {
-                        _id: ObjectId(),
-                        username: req.body.username,
-                        date: Date(),
-                        comment: req.body.comment
-                    }
-                }
+    // app.patch("/snippets/:id/comments/create", async (req, res) => {
+    //     console.log(req.body);
+    //     let db = await connect();
+    //     let results = await db.collection("snippets").updateOne({
+    //         "_id": ObjectId(req.params.id)
+    //     },
+    //         {
+    //             $push: {
+    //                 comments: {
+    //                     _id: ObjectId(),
+    //                     username: req.body.username,
+    //                     date: Date(),
+    //                     comment: req.body.comment
+    //                 }
+    //             }
+    //         },
+    //         { upsert: true });
+    //     res.status(200);
+    //     res.send(results);
+    // })
+
+        // create new comment and return the new comment added
+        app.patch("/snippets/:id/comments/create", async (req, res) => {
+            console.log(req.body);
+            let db = await connect();
+            let results = await db.collection("snippets").findOneAndUpdate({
+                "_id": ObjectId(req.params.id)
             },
-            { upsert: true });
-        res.status(200);
-        res.send(results);
-    })
+                {
+                    $push: {
+                        comments: {
+                            _id: ObjectId(),
+                            username: req.body.username,
+                            date: Date(),
+                            comment: req.body.comment
+                        }
+                    }
+                },
+                {
+                    projection: {
+                        _id: 0,
+                        name: 0,
+                        content: 0,
+                        occasions: 0,
+                        type: 0,
+                        creator: 0,
+                        collectedBy: 0,
+                        theme: 0,
+                        length: 0,
+                        comments: {$slice:-1}
+                    },
+                    returnDocument: "after"
+                 });
+            console.log(results);
+            res.status(200);
+            res.send(results);
+        })
 
 }
 
