@@ -29,8 +29,8 @@ async function main() {
     // read all snippets
     app.get("/snippets", async (req, res) => {
         let db = await connect();
-        let snippets = await db.collection("snippets").find().toArray();
-        res.json(snippets)
+        let results = await db.collection("snippets").find().toArray();
+        res.json(results)
     })
 
     // delete existing snippet
@@ -172,6 +172,15 @@ async function main() {
             });
         res.status(200);
         res.send(results);
+    })
+
+    // read categories
+    app.get("/categories", async (req, res) => {
+        console.log("enter categories routing");
+        let db = await connect();
+        let results = await db.collection("categories").find().toArray();
+        console.log(results);
+        res.json(results)
     })
 }
 
