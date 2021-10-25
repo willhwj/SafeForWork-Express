@@ -175,10 +175,21 @@ async function main() {
     })
 
     // read categories
-    app.get("/categories", async (req, res) => {
-        console.log("enter categories routing");
+    app.get("/categories/:category/:option", async (req, res) => {
+        console.log("enter categories routing. req.params are ", req.params);
         let db = await connect();
-        let results = await db.collection("categories").find().toArray();
+        let results =[];
+        if (req.params.category === "all"){    
+            results = await db.collection("categories").find().toArray();
+        } else {
+            req.params.option === "all" ?
+            results = await db.collection("categories").find({"category": req.params.category}).toArray():
+            results = await db.collection("categories").find({
+                "category": req.params.category,
+                "optionName": req.params.option
+            }).toArray();
+        }
+        
         console.log(results);
         res.json(results)
     })
