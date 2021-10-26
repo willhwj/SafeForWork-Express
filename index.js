@@ -117,7 +117,9 @@ async function main() {
             occasions: [...req.body.occasions],
             type: req.body.type,
             theme: req.body.theme,
-            length: req.body.length
+            length: req.body.length,
+            comments:[],
+            collectedBy: []
         });
         res.status(200);
         res.send(results);
