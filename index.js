@@ -26,6 +26,32 @@ async function connect() {
 
 async function main() {
 
+    // count snippets, comments and collectedBy based on theme, type, occasion or length
+    // app.get("/snippets/count", async (req, res)=> {
+
+    // })
+
+    // update category collection when a snippet is deleted, reducing count of snippet by 1, count of comments by number of comments in the deleted snippet & count of collectedBy by number of collectedBy in the deleted snippet in all impacted category documents
+    app.patch("/categories/update/snippetDeleted", async (req, res) => {
+        let db = await connect();
+        let filterCriteria =[...req.body.occasion, req.body.theme, req.body.type, req.body.length];
+        let results = await db.collection("categories").updateMany(
+            {
+                // match all category documents impacted by the snippet changed, including theme, type, length and occasion. at least 4 or more documents are matched, because occasion can have multiple values
+                "optionName": {$in: filterCriteria}
+            },
+            {
+                $inc: {
+                    "numSnippets": req.body.changeInSnippets, 
+                    "numComments": req.body.changeInComments, 
+                    "numCollected": req.body.changeInCollections
+                }
+            }
+        );
+        console.log(results);
+        res.json(results)
+    })
+
     // read all snippets
     app.get("/snippets", async (req, res) => {
         let db = await connect();
@@ -39,6 +65,23 @@ async function main() {
         let results = await db.collection("snippets").deleteOne({
             "_id": ObjectId(req.params.id)
         });
+        
+        let filterCriteria =[...req.body.occasion, req.body.theme, req.body.type, req.body.length];
+        let results2 = await db.collection("categories").updateMany(
+            {
+                // match all category documents impacted by the snippet changed, including theme, type, length and occasion. at least 4 or more documents are matched, because occasion can have multiple values
+                "optionName": {$in: filterCriteria}
+            },
+            {
+                $inc: {
+                    "numSnippets": req.body.changeInSnippets, 
+                    "numComments": req.body.changeInComments, 
+                    "numCollected": req.body.changeInCollections
+                }
+            }
+        );
+        console.log(results2);
+
         res.status(200);
         res.send(results);
     })
@@ -142,11 +185,11 @@ async function main() {
     app.patch("/snippets/:id/comments/delete/:commentID", async (req, res) => {
         let db = await connect();
         let results = await db.collection("snippets").findOneAndUpdate(
-            {"_id": ObjectId(req.params.id)},
+            { "_id": ObjectId(req.params.id) },
             {
-                $pull: {comments: {_id: ObjectId(req.params.commentID)} }
+                $pull: { comments: { _id: ObjectId(req.params.commentID) } }
             },
-            {returnDocument: "after"}
+            { returnDocument: "after" }
         );
         res.status(200);
         res.send(results);
@@ -158,9 +201,11 @@ async function main() {
         let db = await connect();
         let results = await db.collection("snippets").findOneAndUpdate(
             { "_id": ObjectId(req.params.id) },
-            { $set: { "comments.$[elem].comment": req.body.comment,
-                      "comments.$[elem].date": Date()  
-                    } 
+            {
+                $set: {
+                    "comments.$[elem].comment": req.body.comment,
+                    "comments.$[elem].date": Date()
+                }
             },
             {
                 arrayFilters: [{ "elem._id": { $eq: ObjectId(req.params.commentID) } }],
@@ -178,18 +223,18 @@ async function main() {
     app.get("/categories/:category/:option", async (req, res) => {
         console.log("enter categories routing. req.params are ", req.params);
         let db = await connect();
-        let results =[];
-        if (req.params.category === "all"){    
+        let results = [];
+        if (req.params.category === "all") {
             results = await db.collection("categories").find().toArray();
         } else {
             req.params.option === "all" ?
-            results = await db.collection("categories").find({"category": req.params.category}).toArray():
-            results = await db.collection("categories").find({
-                "category": req.params.category,
-                "optionName": req.params.option
-            }).toArray();
+                results = await db.collection("categories").find({ "category": req.params.category }).toArray() :
+                results = await db.collection("categories").find({
+                    "category": req.params.category,
+                    "optionName": req.params.option
+                }).toArray();
         }
-        
+
         console.log(results);
         res.json(results)
     })
