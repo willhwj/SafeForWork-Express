@@ -22,6 +22,26 @@ async function connect() {
     return db;
 }
 
+async function updateCategory(req, res) {
+    console.log("enter updateCategory");
+    let db = await connect();
+    let filterCriteria = [...req.body.occasion, req.body.theme, req.body.type, req.body.length];
+    let results = await db.collection("categories").updateMany(
+        {
+            // match all category documents impacted by the snippet changed, including theme, type, length and occasion. at least 4 or more documents are matched, because occasion can have multiple values
+            "optionName": { $in: filterCriteria }
+        },
+        {
+            $inc: {
+                "numSnippets": req.body.changeInSnippets,
+                "numComments": req.body.changeInComments,
+                "numCollected": req.body.changeInCollections
+            }
+        }
+    );
+    console.log(results);
+}
+
 // Routes
 
 async function main() {
@@ -31,26 +51,26 @@ async function main() {
 
     // })
 
-    // update category collection when a snippet is deleted, reducing count of snippet by 1, count of comments by number of comments in the deleted snippet & count of collectedBy by number of collectedBy in the deleted snippet in all impacted category documents
-    app.patch("/categories/update/snippetDeleted", async (req, res) => {
-        let db = await connect();
-        let filterCriteria =[...req.body.occasion, req.body.theme, req.body.type, req.body.length];
-        let results = await db.collection("categories").updateMany(
-            {
-                // match all category documents impacted by the snippet changed, including theme, type, length and occasion. at least 4 or more documents are matched, because occasion can have multiple values
-                "optionName": {$in: filterCriteria}
-            },
-            {
-                $inc: {
-                    "numSnippets": req.body.changeInSnippets, 
-                    "numComments": req.body.changeInComments, 
-                    "numCollected": req.body.changeInCollections
-                }
-            }
-        );
-        console.log(results);
-        res.json(results)
-    })
+    // update category collection when a snippet is deleted
+    // app.patch("/categories/update/snippetDeleted", async (req, res) => {
+    //     let db = await connect();
+    //     let filterCriteria =[...req.body.occasion, req.body.theme, req.body.type, req.body.length];
+    //     let results = await db.collection("categories").updateMany(
+    //         {
+    //             // match all category documents impacted by the snippet changed, including theme, type, length and occasion. at least 4 or more documents are matched, because occasion can have multiple values
+    //             "optionName": {$in: filterCriteria}
+    //         },
+    //         {
+    //             $inc: {
+    //                 "numSnippets": req.body.changeInSnippets, 
+    //                 "numComments": req.body.changeInComments, 
+    //                 "numCollected": req.body.changeInCollections
+    //             }
+    //         }
+    //     );
+    //     console.log(results);
+    //     res.json(results)
+    // })
 
     // read all snippets
     app.get("/snippets", async (req, res) => {
@@ -65,23 +85,22 @@ async function main() {
         let results = await db.collection("snippets").deleteOne({
             "_id": ObjectId(req.params.id)
         });
-        
-        let filterCriteria =[...req.body.occasion, req.body.theme, req.body.type, req.body.length];
+
+        let filterCriteria = [...req.body.occasion, req.body.theme, req.body.type, req.body.length];
         let results2 = await db.collection("categories").updateMany(
             {
                 // match all category documents impacted by the snippet changed, including theme, type, length and occasion. at least 4 or more documents are matched, because occasion can have multiple values
-                "optionName": {$in: filterCriteria}
+                "optionName": { $in: filterCriteria }
             },
             {
                 $inc: {
-                    "numSnippets": req.body.changeInSnippets, 
-                    "numComments": req.body.changeInComments, 
+                    "numSnippets": req.body.changeInSnippets,
+                    "numComments": req.body.changeInComments,
                     "numCollected": req.body.changeInCollections
                 }
             }
         );
         console.log(results2);
-
         res.status(200);
         res.send(results);
     })
@@ -103,6 +122,7 @@ async function main() {
                 }
             },
             { upsert: true });
+
         res.status(200);
         res.send(results);
     })
@@ -118,7 +138,7 @@ async function main() {
             type: req.body.type,
             theme: req.body.theme,
             length: req.body.length,
-            comments:[],
+            comments: [],
             collectedBy: []
         });
         res.status(200);
