@@ -22,10 +22,10 @@ async function connect() {
     return db;
 }
 
-async function updateCategory(req) {
+async function updateCategory(categoryChange) {
     console.log("enter updateCategory");
     let db = await connect();
-    let filterCriteria = [...req.body.occasion, req.body.theme, req.body.type, req.body.length];
+    let filterCriteria = [...categoryChange.occasions, categoryChange.theme, categoryChange.type, categoryChange.length];
     console.log(filterCriteria);
     let results = await db.collection("categories").updateMany(
         {
@@ -34,9 +34,9 @@ async function updateCategory(req) {
         },
         {
             $inc: {
-                "numSnippets": req.body.changeInSnippets,
-                "numComments": req.body.changeInComments,
-                "numCollected": req.body.changeInCollections
+                "numSnippets": categoryChange.changeInSnippets,
+                "numComments": categoryChange.changeInComments,
+                "numCollected": categoryChange.changeInCollections
             }
         }
     );
@@ -52,26 +52,22 @@ async function main() {
 
     // })
 
-    // update category collection when a snippet is deleted
-    // app.patch("/categories/update/snippetDeleted", async (req, res) => {
-    //     let db = await connect();
-    //     let filterCriteria =[...req.body.occasion, req.body.theme, req.body.type, req.body.length];
-    //     let results = await db.collection("categories").updateMany(
-    //         {
-    //             // match all category documents impacted by the snippet changed, including theme, type, length and occasion. at least 4 or more documents are matched, because occasion can have multiple values
-    //             "optionName": {$in: filterCriteria}
-    //         },
-    //         {
-    //             $inc: {
-    //                 "numSnippets": req.body.changeInSnippets, 
-    //                 "numComments": req.body.changeInComments, 
-    //                 "numCollected": req.body.changeInCollections
-    //             }
-    //         }
-    //     );
-    //     console.log(results);
-    //     res.json(results)
-    // })
+    // start category collection from clean slate
+    app.patch("/categories/reset", async (req, res) => {
+        let db = await connect();
+        let results = await db.collection("categories").updateMany(
+            {},
+            {
+                $set: {
+                    "numSnippets": 0,
+                    "numComments": 0,
+                    "numCollected": 0
+                }
+            }
+        );
+        console.log(results);
+        res.json(results)
+    })
 
     // read all snippets
     app.get("/snippets", async (req, res) => {
@@ -87,7 +83,7 @@ async function main() {
             "_id": ObjectId(req.params.id)
         });
 
-        await updateCategory(req);
+        await updateCategory(req.body.categoryChange);
 
         res.status(200);
         res.send(results);
@@ -96,6 +92,20 @@ async function main() {
     // update existing snippet
     app.patch("/snippets/update/:id", async (req, res) => {
         let db = await connect();
+        let currentSnippet = await db.collection("snippets").findOne({
+            "_id": ObjectId(req.params.id)
+        },
+            {
+                length: 1,
+                occasions: 1,
+                type: 1,
+                theme: 1
+            });
+        // track all category options in previous snippet
+        let filterForDecrement = [...currentSnippet.occasions, currentSnippet.length, currentSnippet.type, currentSnippet.theme];
+        // track all cateogry options in new snippet
+        let filterForIncrement = [...req.body.occasions, req.body.length, req.body.type, req.body.theme];
+
         let results = await db.collection("snippets").updateOne({
             "_id": ObjectId(req.params.id)
         },
@@ -111,6 +121,30 @@ async function main() {
             },
             { upsert: true });
 
+        // all category options in new snippet increments by 1, all category options in previous snippet decrement by 1. Net result is that removed options decrement by 1, added options increment by 1
+        let results2 = await db.collection("categories").updateMany(
+            {
+                "optionName": { $in: filterForIncrement }
+            },
+            {
+                $inc: {
+                    "numSnippets": 1
+                }
+            }
+        );
+
+        let results3 = await db.collection("categories").updateMany(
+            {
+                "optionName": { $in: filterForDecrement }
+            },
+            {
+                $inc: {
+                    "numSnippets": -1
+                }
+            }
+        );
+
+        console.log(results2, results3);
         res.status(200);
         res.send(results);
     })
@@ -129,6 +163,9 @@ async function main() {
             comments: [],
             collectedBy: []
         });
+
+        await updateCategory(req.body.categoryChange);
+
         res.status(200);
         res.send(results);
     })
@@ -187,6 +224,9 @@ async function main() {
                 },
                 returnDocument: "after"
             });
+
+        await updateCategory(req.body.categoryChange);
+
         res.status(200);
         res.send(results);
     })
@@ -201,6 +241,9 @@ async function main() {
             },
             { returnDocument: "after" }
         );
+
+        await updateCategory(req.body.categoryChange);
+
         res.status(200);
         res.send(results);
     })
