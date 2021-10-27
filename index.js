@@ -22,10 +22,11 @@ async function connect() {
     return db;
 }
 
-async function updateCategory(req, res) {
+async function updateCategory(req) {
     console.log("enter updateCategory");
     let db = await connect();
     let filterCriteria = [...req.body.occasion, req.body.theme, req.body.type, req.body.length];
+    console.log(filterCriteria);
     let results = await db.collection("categories").updateMany(
         {
             // match all category documents impacted by the snippet changed, including theme, type, length and occasion. at least 4 or more documents are matched, because occasion can have multiple values
@@ -86,21 +87,8 @@ async function main() {
             "_id": ObjectId(req.params.id)
         });
 
-        let filterCriteria = [...req.body.occasion, req.body.theme, req.body.type, req.body.length];
-        let results2 = await db.collection("categories").updateMany(
-            {
-                // match all category documents impacted by the snippet changed, including theme, type, length and occasion. at least 4 or more documents are matched, because occasion can have multiple values
-                "optionName": { $in: filterCriteria }
-            },
-            {
-                $inc: {
-                    "numSnippets": req.body.changeInSnippets,
-                    "numComments": req.body.changeInComments,
-                    "numCollected": req.body.changeInCollections
-                }
-            }
-        );
-        console.log(results2);
+        await updateCategory(req);
+
         res.status(200);
         res.send(results);
     })
