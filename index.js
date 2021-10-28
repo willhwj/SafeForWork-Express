@@ -76,8 +76,10 @@ async function main() {
         res.json(results)
     })
 
-    // delete existing snippet
+    // delete snippet
     app.delete("/snippets/delete/:id", async (req, res) => {
+        console.log("enter delete snippet");
+        console.log(req.body);
         let db = await connect();
         let results = await db.collection("snippets").deleteOne({
             "_id": ObjectId(req.params.id)
@@ -89,7 +91,7 @@ async function main() {
         res.send(results);
     })
 
-    // update existing snippet
+    // update snippet
     app.patch("/snippets/update/:id", async (req, res) => {
         let db = await connect();
         let currentSnippet = await db.collection("snippets").findOne({
@@ -149,7 +151,7 @@ async function main() {
         res.send(results);
     })
 
-    // create new snippet
+    // create snippet
     app.post("/snippets/create", async (req, res) => {
         let db = await connect();
         let results = await db.collection("snippets").insertOne({
@@ -194,7 +196,7 @@ async function main() {
     // })
 
     // method 2: use mongodb findOneAndUpdate, it returns updated documented
-    // create new comment and return the new comment added
+    // create comment and return the new comment added
     app.patch("/snippets/:id/comments/create", async (req, res) => {
         let db = await connect();
         let results = await db.collection("snippets").findOneAndUpdate(
@@ -231,7 +233,7 @@ async function main() {
         res.send(results);
     })
 
-    // delete existing comment and return the updated snippet
+    // delete comment and return the updated snippet
     app.patch("/snippets/:id/comments/delete/:commentID", async (req, res) => {
         let db = await connect();
         let results = await db.collection("snippets").findOneAndUpdate(
@@ -248,7 +250,7 @@ async function main() {
         res.send(results);
     })
 
-    // update existing comment and return the updated snippet
+    // update comment and return the updated snippet
     app.patch("/snippets/:id/comments/update/:commentID", async (req, res) => {
         console.log(req.body);
         let db = await connect();
