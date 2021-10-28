@@ -47,11 +47,6 @@ async function updateCategory(categoryChange) {
 
 async function main() {
 
-    // count snippets, comments and collectedBy based on theme, type, occasion or length
-    // app.get("/snippets/count", async (req, res)=> {
-
-    // })
-
     // start category collection from clean slate
     app.patch("/categories/reset", async (req, res) => {
         let db = await connect();
@@ -69,10 +64,22 @@ async function main() {
         res.json(results)
     })
 
-    // read all snippets
-    app.get("/snippets", async (req, res) => {
+    // read snippets according to category and option selected
+    app.get("/snippets/:category/:option", async (req, res) => {
         let db = await connect();
-        let results = await db.collection("snippets").find().toArray();
+        console.log("enter search snippets");
+        let results = [];
+        switch (true) {
+            case req.params.category === "all" && req.params.option === "all":
+                console.log("search all snippets");
+                results = await db.collection("snippets").find().toArray();
+                break;
+            default:
+                results = await db.collection("snippets").find({
+                    [req.params.category]: req.params.option
+                }).toArray();
+        }
+
         res.json(results)
     })
 
