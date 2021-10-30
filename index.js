@@ -6,42 +6,11 @@ const ObjectId = require('mongodb').ObjectId;
 const MongoClient = mongodb.MongoClient;
 const dotenv = require('dotenv');
 dotenv.config();
+const validate = require("./utilfunctions");
 
 let app = express();
 app.use(express.json());
 app.use(cors());
-
-// connect to the Mongo DB
-async function connect() {
-    const mongo_url = process.env.MONGO_URI;
-    let client = await MongoClient.connect(mongo_url, {
-        "useUnifiedTopology": true
-    })
-    let db = client.db("sfw");
-    console.log("database connected");
-    return db;
-}
-
-async function updateCategory(categoryChange) {
-    console.log("enter updateCategory");
-    let db = await connect();
-    let filterCriteria = [...categoryChange.occasions, categoryChange.theme, categoryChange.type, categoryChange.length];
-    console.log(filterCriteria);
-    let results = await db.collection("categories").updateMany(
-        {
-            // match all category documents impacted by the snippet changed, including theme, type, length and occasion. at least 4 or more documents are matched, because occasion can have multiple values
-            "optionName": { $in: filterCriteria }
-        },
-        {
-            $inc: {
-                "numSnippets": categoryChange.changeInSnippets,
-                "numComments": categoryChange.changeInComments,
-                "numCollected": categoryChange.changeInCollections
-            }
-        }
-    );
-    console.log(results);
-}
 
 // Routes
 
@@ -202,7 +171,7 @@ async function main() {
     })
 
     // create snippet
-    app.post("/snippets/create", async (req, res) => {
+    app.post("/snippets/create", (req, res, next) => validate(req, res, next), async (req, res) => {
         try {
             let db = await connect();
             let results = await db.collection("snippets").insertOne({
@@ -227,31 +196,8 @@ async function main() {
         }
     })
 
-    // method 1: use mongodb updateOne. however, it does not return the updated document
-    // create new comment
-    // app.patch("/snippets/:id/comments/create", async (req, res) => {
-    //     console.log(req.body);
-    //     let db = await connect();
-    //     let results = await db.collection("snippets").updateOne({
-    //         "_id": ObjectId(req.params.id)
-    //     },
-    //         {
-    //             $push: {
-    //                 comments: {
-    //                     _id: ObjectId(),
-    //                     username: req.body.username,
-    //                     date: Date(),
-    //                     comment: req.body.comment
-    //                 }
-    //             }
-    //         },
-    //         { upsert: true });
-    //     res.status(200);
-    //     res.send(results);
-    // })
-
-    // method 2: use mongodb findOneAndUpdate, it returns updated documented
     // create comment and return the new comment added
+    // use mongodb findOneAndUpdate, it returns updated documented
     app.patch("/snippets/:id/comments/create", async (req, res) => {
         try {
             let db = await connect();
