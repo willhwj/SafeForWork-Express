@@ -6,7 +6,7 @@ const ObjectId = require('mongodb').ObjectId;
 const MongoClient = mongodb.MongoClient;
 const dotenv = require('dotenv');
 dotenv.config();
-const validate = require("./utilfunctions");
+const {connect, validate, updateCategory} = require("./utilfunctions");
 
 let app = express();
 app.use(express.json());
@@ -39,7 +39,7 @@ async function main() {
     })
 
     // search categories by category name and option name selected by user
-    app.get("/categories/:category/:option", async (req, res) => {
+    app.get("/categories/:category/:option", (req, res, next) => validate(req, res, next), async (req, res) => {
         console.log("enter categories routing. req.params are ", req.params);
         try {
             let db = await connect();
@@ -63,7 +63,7 @@ async function main() {
     })
 
     // read snippets according to category and option selected
-    app.get("/snippets/:category/:option", async (req, res) => {
+    app.get("/snippets/:category/:option", (req, res, next) => validate(req, res, next), async (req, res) => {
         try {
             let db = await connect();
             console.log("enter search snippets");
@@ -85,7 +85,7 @@ async function main() {
     })
 
     // delete snippet
-    app.delete("/snippets/delete/:id", async (req, res) => {
+    app.delete("/snippets/delete/:id", (req, res, next) => validate(req, res, next), async (req, res) => {
         console.log("enter delete snippet");
         console.log(req.body);
         try {
@@ -104,7 +104,7 @@ async function main() {
     })
 
     // update snippet
-    app.patch("/snippets/update/:id", async (req, res) => {
+    app.patch("/snippets/update/:id", (req, res, next) => validate(req, res, next), async (req, res) => {
         try {
             let db = await connect();
             let currentSnippet = await db.collection("snippets").findOne({
@@ -198,7 +198,7 @@ async function main() {
 
     // create comment and return the new comment added
     // use mongodb findOneAndUpdate, it returns updated documented
-    app.patch("/snippets/:id/comments/create", async (req, res) => {
+    app.patch("/snippets/:id/comments/create", (req, res, next) => validate(req, res, next), async (req, res) => {
         try {
             let db = await connect();
             let results = await db.collection("snippets").findOneAndUpdate(
@@ -239,7 +239,7 @@ async function main() {
     })
 
     // delete comment and return the updated snippet
-    app.patch("/snippets/:id/comments/delete/:commentID", async (req, res) => {
+    app.patch("/snippets/:id/comments/delete/:commentID", (req, res, next) => validate(req, res, next), async (req, res) => {
         try {
             let db = await connect();
             let results = await db.collection("snippets").findOneAndUpdate(
@@ -260,7 +260,7 @@ async function main() {
     })
 
     // update comment and return the updated snippet
-    app.patch("/snippets/:id/comments/update/:commentID", async (req, res) => {
+    app.patch("/snippets/:id/comments/update/:commentID", (req, res, next) => validate(req, res, next), async (req, res) => {
         try {
             let db = await connect();
             let results = await db.collection("snippets").findOneAndUpdate(
