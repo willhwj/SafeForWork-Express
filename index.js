@@ -6,11 +6,43 @@ const ObjectId = require('mongodb').ObjectId;
 const MongoClient = mongodb.MongoClient;
 const dotenv = require('dotenv');
 dotenv.config();
-const {connect, validate, updateCategory} = require("./utilfunctions");
+const {validate} = require("./utilfunctions");
 
 let app = express();
 app.use(express.json());
 app.use(cors());
+
+async function connect() {
+    const mongo_url = process.env.MONGO_URI;
+    let client = await MongoClient.connect(mongo_url, {
+        "useUnifiedTopology": true
+    });
+    let db = client.db("sfw");
+    console.log("database connected");
+    return db;
+}
+
+// function to update category collection when a snippet or comment is changed
+async function updateCategory(categoryChange) {
+    console.log("enter updateCategory");
+    let db = await connect();
+    let filterCriteria = [...categoryChange.occasions, categoryChange.theme, categoryChange.type, categoryChange.length];
+    console.log(filterCriteria);
+    let results = await db.collection("categories").updateMany(
+        {
+            // match all category documents impacted by the snippet changed, including theme, type, length and occasion. at least 4 or more documents are matched, because occasion can have multiple values
+            "optionName": { $in: filterCriteria }
+        },
+        {
+            $inc: {
+                "numSnippets": categoryChange.changeInSnippets,
+                "numComments": categoryChange.changeInComments,
+                "numCollected": categoryChange.changeInCollections
+            }
+        }
+    );
+    console.log(results);
+}
 
 // Routes
 
@@ -65,8 +97,9 @@ async function main() {
     // read snippets according to category and option selected
     app.get("/snippets/:category/:option", (req, res, next) => validate(req, res, next), async (req, res) => {
         try {
-            let db = await connect();
             console.log("enter search snippets");
+            let db = await connect();
+            console.log(db);
             let results = [];
             switch (true) {
                 case req.params.category === "all" && req.params.option === "all":
